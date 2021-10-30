@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\File;
 use App\Models\products;
 use Illuminate\Http\Request;
 
@@ -36,7 +37,18 @@ class productsController extends Controller
      */
     public function store(Request $request)
     {
-        $products = Products::create($request->all());
+        if ($request->file('image')) {
+            $file = $request->file('image');
+            $extention = $file->getClientOriginalExtension();
+            $filename = time() . '.' . $extention;
+            $file->move('uploads/products/', $filename);
+        }
+        $products = Products::create([
+            'name' => $request->name,
+            'description' => $request->description,
+            'price' => $request->price,
+            'image' => $filename
+        ]);
         return $products;
     }
 
@@ -72,9 +84,26 @@ class productsController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $product= Products::find($id);
-        $product->update($request->all());
-        return $product;
+        $products = Products::find($id);
+        if ($products) {
+            $products->name = $request->name;
+            $products->description = $request->description;
+            $products->price = $request->price;
+            if ($request->hasFile('image')) {
+                $destination = 'uploads/products/' . $products->image;
+                if (File::exists($destination)) {
+                    File::delete($destination);
+                }
+                $file = $request->file('image');
+                $extention = $file->getClientOriginalExtension();
+                $filename = time() . '.' . $extention;
+                $file->move('uploads/products/', $filename);
+                $products->image = $filename;
+            }
+            $products->update($request->all());
+        }
+
+        return $products;
     }
 
     /**
